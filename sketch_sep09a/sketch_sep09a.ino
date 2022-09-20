@@ -1,9 +1,13 @@
+#include <RedBot.h>  // This line "includes" the library into your sketch.
+
+RedBotMotors motors; // Instantiate the motor control object.
+
 const int leftPhotoresistor = A2;
 const int rightPhotoresistor = A3;
-const int leftEcho = A0;
-const int rightEcho = A7;
-const int leftTrig = A1;
-const int rightTrig = A6;
+const int rightEcho = A0;
+const int leftEcho = A4;
+const int rightTrig = A1;
+const int leftTrig = A5;
 
 int leftRes;
 int rightRes;
@@ -23,25 +27,30 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  leftRes = analogRead(leftPhotoresistor);
-  rightRes = analogRead(rightPhotoresistor);
-
-  echo();
-  
-  Serial.print("Left photoresistor value: ");
-  Serial.println(leftRes);
-  Serial.print("Right photoresistor value: ");
-  Serial.println(rightRes);
-  Serial.print("Left distance: ");
-  Serial.print(leftDistance);
-  Serial.println(" cm");
-  Serial.print("Right distance: ");
-  Serial.print(rightDistance);
-  Serial.println(" cm");
-  delay(500);
+  photoResistorValues();
+  echoValues();
+  obstacleCollosion();
 }
 
-void echo() {
+void forward() {
+  // Forward
+  motors.rightMotor(-111);
+  motors.leftMotor(107);
+}
+
+void turnRight() {
+  // Turn right when the ass of the bot is facing you
+  motors.rightMotor(-220);
+  motors.leftMotor(24);
+}
+
+void turnLeft() {
+  // Turn left when the ass of the bot is facing you
+  motors.leftMotor(220);
+  motors.rightMotor(-24);
+}
+
+void echoValues() {
   digitalWrite(leftTrig, LOW);
   delayMicroseconds(2);
   digitalWrite(leftTrig, HIGH);
@@ -57,4 +66,38 @@ void echo() {
   digitalWrite(rightTrig, LOW);
   rightDuration = pulseIn(rightEcho, HIGH);
   rightDistance = rightDuration * 0.034 / 2;
+  
+  Serial.print("Left distance: ");
+  Serial.print(leftDistance);
+  Serial.println(" cm");
+  Serial.print("Right distance: ");
+  Serial.print(rightDistance);
+  Serial.println(" cm");
+}
+
+void photoResistorValues() {
+  leftRes = analogRead(leftPhotoresistor);
+  rightRes = analogRead(rightPhotoresistor);
+  
+  Serial.print("Left photoresistor value: ");
+  Serial.println(leftRes);
+  Serial.print("Right photoresistor value: ");
+  Serial.println(rightRes);
+}
+
+void obstacleCollosion() {
+  if (rightDistance <= 24) {
+    Serial.print("Turning Left ");
+    turnLeft();
+  }
+
+  else if (leftDistance <= 24) {
+    Serial.print("Turning Right ");
+    turnRight();
+  }
+
+  else {
+    Serial.println("Forward");
+    forward();
+  }
 }
