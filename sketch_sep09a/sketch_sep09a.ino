@@ -1,6 +1,11 @@
 #include <RedBot.h>  // This line "includes" the library into your sketch.
+#include <NewPing.h>
+// https://bitbucket.org/teckel12/arduino-new-ping/wiki/Home
 
 RedBotMotors motors; // Instantiate the motor control object.
+
+#define SONAR_NUM 2      // Number of sensors.
+#define MAX_DISTANCE 200 // Maximum distance (in cm) to ping
 
 const int leftPhotoresistor = A2;
 const int rightPhotoresistor = A3;
@@ -16,13 +21,19 @@ int rightDistance;
 long leftDuration;
 long rightDuration;
 
+NewPing sonar[SONAR_NUM] = {
+  NewPing sonar(leftTrig, leftEcho, MAX_DISTANCE);
+  NewPing sonar(rightTrig, rightEcho, MAX_DISTANCE);
+}
+
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
-  pinMode(leftTrig, OUTPUT);
-  pinMode(rightTrig, OUTPUT);
-  pinMode(leftEcho, INPUT);
-  pinMode(rightEcho, INPUT);
+//  pinMode(leftTrig, OUTPUT);
+//  pinMode(rightTrig, OUTPUT);
+//  pinMode(leftEcho, INPUT);
+//  pinMode(rightEcho, INPUT);
 }
 
 void loop() {
@@ -30,12 +41,18 @@ void loop() {
   photoResistorValues();
   echoValues();
   obstacleCollosion();
+  delay(500);
 }
 
 void forward() {
   // Forward
   motors.rightMotor(-111);
-  motors.leftMotor(107);
+  motors.leftMotor(105);
+}
+
+void backwards() {
+  motors.rightMotor(111);
+  motors.leftMotor(-105);
 }
 
 void turnRight() {
@@ -86,12 +103,17 @@ void photoResistorValues() {
 }
 
 void obstacleCollosion() {
-  if (rightDistance <= 24) {
-    Serial.print("Turning Left ");
+  if ((rightDistance <= 18) && (leftDistance <= 18)) {
+    Serial.println("Moving Backwards ");
+    backwards();
+  }
+  
+  else if (rightDistance <= 18) {
+    Serial.println("Turning Left ");
     turnLeft();
   }
 
-  else if (leftDistance <= 24) {
+  else if (leftDistance <= 18) {
     Serial.print("Turning Right ");
     turnRight();
   }
