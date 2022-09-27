@@ -5,43 +5,43 @@
 RedBotMotors motors; // Instantiate the motor control object.
 
 #define SONAR_NUM 2      // Number of sensors.
-#define MAX_DISTANCE 200 // Maximum distance (in cm) to ping
+#define MAX_DISTANCE 1000 // Maximum distance (in cm) to ping
+#define RIGHTECHO A0
+#define RIGHTTRIG A1
+#define LEFTPHOTORESISTOR A2
+#define RIGHTPHOTORESISTOR A3
+#define LEFTECHO A4
+#define LEFTTRIG A5
 
-const int leftPhotoresistor = A2;
-const int rightPhotoresistor = A3;
-const int rightEcho = A0;
-const int leftEcho = A4;
-const int rightTrig = A1;
-const int leftTrig = A5;
-
-int leftRes;
-int rightRes;
-int leftDistance;
-int rightDistance;
-long leftDuration;
-long rightDuration;
+enum
+{
+  advance,
+  left,
+  right,
+  reverse
+}machineState;
 
 NewPing sonar[SONAR_NUM] = {
-  NewPing sonar(leftTrig, leftEcho, MAX_DISTANCE);
-  NewPing sonar(rightTrig, rightEcho, MAX_DISTANCE);
-}
+  NewPing(LEFTTRIG, LEFTECHO, MAX_DISTANCE),
+  NewPing(RIGHTTRIG, RIGHTECHO, MAX_DISTANCE)
+};
 
+float leftRes;
+float rightRes;
+float ambientLight;
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
-//  pinMode(leftTrig, OUTPUT);
-//  pinMode(rightTrig, OUTPUT);
-//  pinMode(leftEcho, INPUT);
-//  pinMode(rightEcho, INPUT);
+  ambientLight = ((analogRead(LEFTPHOTORESISTOR) + analogRead(RIGHTPHOTORESISTOR)));
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  photoResistorValues();
-  echoValues();
-  obstacleCollosion();
-  delay(500);
+//  photoResistorValues();
+//  Serial.print("ambient light value: ");
+//  Serial.println(ambientLight);
+  echoCollision();
+  delay(50);
 }
 
 void forward() {
@@ -52,7 +52,7 @@ void forward() {
 
 void backwards() {
   motors.rightMotor(111);
-  motors.leftMotor(-105);
+  motors.leftMotor(-93);
 }
 
 void turnRight() {
@@ -67,59 +67,66 @@ void turnLeft() {
   motors.rightMotor(-24);
 }
 
-void echoValues() {
-  digitalWrite(leftTrig, LOW);
-  delayMicroseconds(2);
-  digitalWrite(leftTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(leftTrig, LOW);
-  leftDuration = pulseIn(leftEcho, HIGH);
-  leftDistance = leftDuration * 0.034 / 2;
+void checkState() {
+  switch(machineState){
+    case advance:
+      Serial.println("forward");
+      forward();
+    break;
+    case left:
+      Serial.println("left");
+      turnLeft();
+    break;
+    case right:
+      Serial.println("right");
+      turnRight();
+    break;
+    case reverse:
+      Serial.println("reverse");
+      backwards();
+    break;
+  }
+}
 
-  digitalWrite(rightTrig, LOW);
-  delayMicroseconds(2);
-  digitalWrite(rightTrig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(rightTrig, LOW);
-  rightDuration = pulseIn(rightEcho, HIGH);
-  rightDistance = rightDuration * 0.034 / 2;
+void echoCollision() {
+  for (uint8_t i =0; i < SONAR_NUM; i++) {
+      delay(50); // Waiting 50ms between pings is about 20 pings/sec. 29ms should be the shortest delay between pings.
+      Serial.print(i);
+      Serial.print("=");
+      Serial.print(sonar[i].ping_cm());
+      Serial.print("cm ");
+  }
+  Serial.println();
   
-  Serial.print("Left distance: ");
-  Serial.print(leftDistance);
-  Serial.println(" cm");
-  Serial.print("Right distance: ");
-  Serial.print(rightDistance);
-  Serial.println(" cm");
+  if((sonar[0].ping_cm() <= 18) && (sonar[1].ping_cm() <= 18)){
+    machineState = reverse;
+    Serial.println(machineState);
+  }
+  else if(sonar[0].ping_cm() <= 18){
+    machineState = left;
+    Serial.println(machineState);
+  }
+  else if(sonar[1].ping_cm() <= 18){
+    machineState = right;
+    Serial.println(machineState);
+  }
+  else {
+    machineState = advance;
+    Serial.println(machineState);
+  }
+}
+
+void findLight() {
+  leftRes = analogRead(LEFTPHOTORESISTOR);
+  rightRes = analogRead(RIGHTPHOTORESISTOR);
 }
 
 void photoResistorValues() {
-  leftRes = analogRead(leftPhotoresistor);
-  rightRes = analogRead(rightPhotoresistor);
+  leftRes = analogRead(LEFTPHOTORESISTOR);
+  rightRes = analogRead(RIGHTPHOTORESISTOR);
   
   Serial.print("Left photoresistor value: ");
   Serial.println(leftRes);
   Serial.print("Right photoresistor value: ");
   Serial.println(rightRes);
-}
-
-void obstacleCollosion() {
-  if ((rightDistance <= 18) && (leftDistance <= 18)) {
-    Serial.println("Moving Backwards ");
-    backwards();
-  }
-  
-  else if (rightDistance <= 18) {
-    Serial.println("Turning Left ");
-    turnLeft();
-  }
-
-  else if (leftDistance <= 18) {
-    Serial.print("Turning Right ");
-    turnRight();
-  }
-
-  else {
-    Serial.println("Forward");
-    forward();
-  }
 }
