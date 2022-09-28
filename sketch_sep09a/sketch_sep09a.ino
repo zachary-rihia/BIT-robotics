@@ -18,7 +18,8 @@ enum
   advance,
   left,
   right,
-  reverse
+  reverseLeft,
+  reverseRight
 }machineState;
 
 NewPing sonar[SONAR_NUM] = {
@@ -28,11 +29,12 @@ NewPing sonar[SONAR_NUM] = {
 
 float leftRes;
 float rightRes;
-float ambientLight;
+int ambientLight;
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
+  machineState = advance;
   ambientLight = ((analogRead(LEFTPHOTORESISTOR) + analogRead(RIGHTPHOTORESISTOR)));
 }
 
@@ -40,7 +42,9 @@ void loop() {
 //  photoResistorValues();
 //  Serial.print("ambient light value: ");
 //  Serial.println(ambientLight);
-  echoCollision();
+//  echoCollision();
+  findLight();
+//  checkState();
   delay(50);
 }
 
@@ -50,21 +54,26 @@ void forward() {
   motors.leftMotor(105);
 }
 
-void backwards() {
-  motors.rightMotor(111);
-  motors.leftMotor(-93);
+void backwardsLeft() {
+  motors.rightMotor(24);
+  motors.leftMotor(-220);
+}
+
+void backwardsRight() {
+  motors.rightMotor(-24);
+  motors.leftMotor(220);
 }
 
 void turnRight() {
   // Turn right when the ass of the bot is facing you
-  motors.rightMotor(-220);
-  motors.leftMotor(24);
+  motors.rightMotor(-222);
+  motors.leftMotor(12);
 }
 
 void turnLeft() {
   // Turn left when the ass of the bot is facing you
-  motors.leftMotor(220);
-  motors.rightMotor(-24);
+  motors.leftMotor(222);
+  motors.rightMotor(-12);
 }
 
 void checkState() {
@@ -81,9 +90,13 @@ void checkState() {
       Serial.println("right");
       turnRight();
     break;
-    case reverse:
-      Serial.println("reverse");
-      backwards();
+    case reverseLeft:
+      Serial.println("Left reverse");
+      backwardsLeft();
+    break;
+    case reverseRight:
+      Serial.println("Right reverse");
+      backwardsRight();
     break;
   }
 }
@@ -97,17 +110,20 @@ void echoCollision() {
       Serial.print("cm ");
   }
   Serial.println();
-  
-  if((sonar[0].ping_cm() <= 18) && (sonar[1].ping_cm() <= 18)){
-    machineState = reverse;
-    Serial.println(machineState);
+  if((sonar[0].ping_cm() > sonar[1].ping_cm()) && (sonar[0].ping_cm() <= 18) && (sonar[1].ping_cm() <= 18) && (sonar[0].ping_cm() != 0) && (sonar[1].ping_cm() != 0)){
+    machineState = reverseLeft;
+    Serial.println("backwards right");
   }
-  else if(sonar[0].ping_cm() <= 18){
-    machineState = left;
-    Serial.println(machineState);
+  else if((sonar[1].ping_cm() > sonar[0].ping_cm()) && (sonar[0].ping_cm() <= 18) && (sonar[1].ping_cm() <= 18) && (sonar[0].ping_cm() != 0) && (sonar[1].ping_cm() != 0)){
+    machineState = reverseRight;
+    Serial.println("backwards left");
   }
-  else if(sonar[1].ping_cm() <= 18){
+  else if((sonar[0].ping_cm() <= 18) && (sonar[0].ping_cm() != 0) && (sonar[1].ping_cm() != 0)){
     machineState = right;
+    Serial.println(machineState);
+  }
+  else if((sonar[1].ping_cm() <= 18) && (sonar[0].ping_cm() != 0) && (sonar[1].ping_cm() != 0)){
+    machineState = left;
     Serial.println(machineState);
   }
   else {
@@ -119,6 +135,13 @@ void echoCollision() {
 void findLight() {
   leftRes = analogRead(LEFTPHOTORESISTOR);
   rightRes = analogRead(RIGHTPHOTORESISTOR);
+
+  if(leftRes > ambientLight) {
+    Serial.println("left is higher");
+  }
+  else if(leftRes > ambientLight) {
+    Serial.println("left is higher");
+  }
 }
 
 void photoResistorValues() {
