@@ -1,6 +1,6 @@
 #include <RedBot.h>  // This line "includes" the library into your sketch.
-#include <NewPing.h>
-// https://bitbucket.org/teckel12/arduino-new-ping/wiki/Home
+#include <NewPing.h> // https://bitbucket.org/teckel12/arduino-new-ping/wiki/Home
+#include <LightDependentResistor.h> // https://github.com/QuentinCG/Arduino-Light-Dependent-Resistor-Library
 
 RedBotMotors motors; // Instantiate the motor control object.
 
@@ -38,14 +38,9 @@ void setup() {
   ambientLight = ((analogRead(LEFTPHOTORESISTOR) + analogRead(RIGHTPHOTORESISTOR)));
 }
 
-void loop() {
-//  photoResistorValues();
-//  Serial.print("ambient light value: ");
-//  Serial.println(ambientLight);
-//  echoCollision();
+void loop() { 
   findLight();
-//  checkState();
-  delay(50);
+  checkState();
 }
 
 void forward() {
@@ -54,26 +49,26 @@ void forward() {
   motors.leftMotor(105);
 }
 
-void backwardsLeft() {
-  motors.rightMotor(24);
+void backwardsRight() {
+  motors.rightMotor(80);
   motors.leftMotor(-220);
 }
 
-void backwardsRight() {
-  motors.rightMotor(-24);
-  motors.leftMotor(220);
+void backwardsLeft() {
+  motors.rightMotor(220);
+  motors.leftMotor(-80);
 }
 
 void turnRight() {
   // Turn right when the ass of the bot is facing you
-  motors.rightMotor(-222);
-  motors.leftMotor(12);
+  motors.rightMotor(-201);
+  motors.leftMotor(50);
 }
 
 void turnLeft() {
   // Turn left when the ass of the bot is facing you
-  motors.leftMotor(222);
-  motors.rightMotor(-12);
+  motors.leftMotor(201);
+  motors.rightMotor(-50);
 }
 
 void checkState() {
@@ -102,33 +97,31 @@ void checkState() {
 }
 
 void echoCollision() {
-  for (uint8_t i =0; i < SONAR_NUM; i++) {
-      delay(50); // Waiting 50ms between pings is about 20 pings/sec. 29ms should be the shortest delay between pings.
-      Serial.print(i);
-      Serial.print("=");
-      Serial.print(sonar[i].ping_cm());
-      Serial.print("cm ");
+  for (uint8_t i = 0; i < SONAR_NUM; i++) { // Loop through each sensor and display results.
+    delay(50); // Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
+    Serial.print(i);
+    Serial.print("=");
+    Serial.print(sonar[i].ping_cm());
+    Serial.print("cm ");
   }
   Serial.println();
-  if((sonar[0].ping_cm() > sonar[1].ping_cm()) && (sonar[0].ping_cm() <= 18) && (sonar[1].ping_cm() <= 18) && (sonar[0].ping_cm() != 0) && (sonar[1].ping_cm() != 0)){
-    machineState = reverseLeft;
-    Serial.println("backwards right");
-  }
-  else if((sonar[1].ping_cm() > sonar[0].ping_cm()) && (sonar[0].ping_cm() <= 18) && (sonar[1].ping_cm() <= 18) && (sonar[0].ping_cm() != 0) && (sonar[1].ping_cm() != 0)){
+  
+  if(sonar[0].ping_cm() <= 6){
     machineState = reverseRight;
-    Serial.println("backwards left");
+    checkState();
+    delay(600);
+    machineState = advance;
+    delay(250);
   }
-  else if((sonar[0].ping_cm() <= 18) && (sonar[0].ping_cm() != 0) && (sonar[1].ping_cm() != 0)){
-    machineState = right;
-    Serial.println(machineState);
-  }
-  else if((sonar[1].ping_cm() <= 18) && (sonar[0].ping_cm() != 0) && (sonar[1].ping_cm() != 0)){
-    machineState = left;
-    Serial.println(machineState);
+  else if(sonar[1].ping_cm() <= 6){
+    machineState = reverseLeft;
+    checkState();
+    delay(600);
+    machineState = advance;
+    delay(250);
   }
   else {
     machineState = advance;
-    Serial.println(machineState);
   }
 }
 
@@ -136,20 +129,22 @@ void findLight() {
   leftRes = analogRead(LEFTPHOTORESISTOR);
   rightRes = analogRead(RIGHTPHOTORESISTOR);
 
-  if(leftRes > ambientLight) {
-    Serial.println("left is higher");
-  }
-  else if(leftRes > ambientLight) {
-    Serial.println("left is higher");
-  }
-}
-
-void photoResistorValues() {
-  leftRes = analogRead(LEFTPHOTORESISTOR);
-  rightRes = analogRead(RIGHTPHOTORESISTOR);
+  int amVal = (sqrt((ambientLight + ambientLight) * 2));
+  int leftVal = (sqrt((ambientLight + leftRes) * 2));
+  int rightVal = (sqrt((ambientLight + rightRes) * 2));
   
-  Serial.print("Left photoresistor value: ");
-  Serial.println(leftRes);
-  Serial.print("Right photoresistor value: ");
-  Serial.println(rightRes);
+  if((leftVal > amVal) && ((leftVal - 1) > rightVal)) {
+    Serial.println("left is higher");
+    machineState = left;
+  }else {
+    echoCollision();
+  }
+  
+  if((rightVal > amVal) && (rightVal > (leftVal - 1))) {
+    Serial.println("right is higher");
+    machineState = right;
+  }
+  else {
+    echoCollision();
+  }
 }
