@@ -1,17 +1,16 @@
 #include <RedBot.h>  // This line "includes" the library into your sketch.
 #include <NewPing.h> // https://bitbucket.org/teckel12/arduino-new-ping/wiki/Home
-#include <LightDependentResistor.h> // https://github.com/QuentinCG/Arduino-Light-Dependent-Resistor-Library
 
 RedBotMotors motors; // Instantiate the motor control object.
 
 #define SONAR_NUM 2      // Number of sensors.
 #define MAX_DISTANCE 1000 // Maximum distance (in cm) to ping
-#define RIGHTECHO A0
-#define RIGHTTRIG A1
+#define LEFTECHO A0
+#define LEFTTRIG A1
 #define LEFTPHOTORESISTOR A2
 #define RIGHTPHOTORESISTOR A3
-#define LEFTECHO A4
-#define LEFTTRIG A5
+#define RIGHTECHO A4
+#define RIGHTTRIG A5
 
 enum
 {
@@ -29,13 +28,17 @@ NewPing sonar[SONAR_NUM] = {
 
 float leftRes;
 float rightRes;
+int leftThreshold;
+int rightThreshold;
 int ambientLight;
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   machineState = advance;
-  ambientLight = ((analogRead(LEFTPHOTORESISTOR) + analogRead(RIGHTPHOTORESISTOR)));
+  leftThreshold = analogRead(LEFTPHOTORESISTOR);
+  rightThreshold = analogRead(RIGHTPHOTORESISTOR);
+  ambientLight = (leftThreshold + rightThreshold);
 }
 
 void loop() { 
@@ -51,24 +54,24 @@ void forward() {
 
 void backwardsRight() {
   motors.rightMotor(80);
-  motors.leftMotor(-220);
+  motors.leftMotor(-200);
 }
 
 void backwardsLeft() {
-  motors.rightMotor(220);
+  motors.rightMotor(200);
   motors.leftMotor(-80);
 }
 
 void turnRight() {
   // Turn right when the ass of the bot is facing you
   motors.rightMotor(-201);
-  motors.leftMotor(50);
+  motors.leftMotor(90);
 }
 
 void turnLeft() {
   // Turn left when the ass of the bot is facing you
   motors.leftMotor(201);
-  motors.rightMotor(-50);
+  motors.rightMotor(-90);
 }
 
 void checkState() {
@@ -106,17 +109,17 @@ void echoCollision() {
   }
   Serial.println();
   
-  if(sonar[0].ping_cm() <= 6){
-    machineState = reverseRight;
+  if((sonar[0].ping_cm() <= 15) && (sonar[0].ping_cm() != 0)){
+    machineState = reverseLeft;
     checkState();
-    delay(600);
+    delay(300);
     machineState = advance;
     delay(250);
   }
-  else if(sonar[1].ping_cm() <= 6){
-    machineState = reverseLeft;
+  else if((sonar[1].ping_cm() <= 15) && (sonar[1].ping_cm() != 0)){
+    machineState = reverseRight;
     checkState();
-    delay(600);
+    delay(300);
     machineState = advance;
     delay(250);
   }
@@ -130,19 +133,21 @@ void findLight() {
   rightRes = analogRead(RIGHTPHOTORESISTOR);
 
   int amVal = (sqrt((ambientLight + ambientLight) * 2));
-  int leftVal = (sqrt((ambientLight + leftRes) * 2));
-  int rightVal = (sqrt((ambientLight + rightRes) * 2));
-  
-  if((leftVal > amVal) && ((leftVal - 1) > rightVal)) {
+  int leftVal = (sqrt((ambientLight + leftRes) * 2)) + 5;
+  int rightVal = (sqrt((ambientLight + rightRes) * 2)) + 5;
+
+  if(leftRes > (leftThreshold + 3) && (leftRes >= rightRes)) {
     Serial.println("left is higher");
-    machineState = left;
+    machineState = right;
+    checkState();
   }else {
     echoCollision();
   }
   
-  if((rightVal > amVal) && (rightVal > (leftVal - 1))) {
+  if(rightRes > (rightThreshold + 3) && (rightRes >= leftRes)) {
     Serial.println("right is higher");
-    machineState = right;
+    machineState = left;
+    checkState();
   }
   else {
     echoCollision();
